@@ -201,7 +201,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 8),
                 InkWell(
                   onTap: canAddPlayer ? setupNotifier.addPlayer : null,
                   borderRadius: BorderRadius.circular(12),

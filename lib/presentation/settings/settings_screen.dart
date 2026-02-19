@@ -12,7 +12,10 @@ class SettingsScreen extends ConsumerWidget {
     final settingsNotifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ajustes')),
+      appBar: AppBar(
+        title: const Text('Ajustes'),
+        centerTitle: true,
+      ),
       body: FadeInUp(
         duration: const Duration(milliseconds: 320),
         child: ListView(
