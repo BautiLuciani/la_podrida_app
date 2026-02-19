@@ -85,23 +85,22 @@ class MatchNotifier extends Notifier<Match?> {
     final round = current.rounds[roundIndex];
     final row = current.bids[roundIndex];
     final playerCount = current.players.length;
-    final biddingOrder = List<int>.generate(
-      playerCount,
-      (index) => (round.starterIndex + index) % playerCount,
-    );
-
-    final pending = biddingOrder.where((index) => row[index] == null || index == playerIndex).toList();
-    if (pending.isEmpty || pending.last != playerIndex) {
+    final constrainedPlayerIndex = (round.starterIndex - 1 + playerCount) % playerCount;
+    if (playerIndex != constrainedPlayerIndex) {
       return false;
     }
 
-    final sum = biddingOrder.fold<int>(
-      0,
-      (total, index) {
-        if (index == playerIndex) return total + bid;
-        return total + (row[index] ?? 0);
-      },
-    );
+    final allOtherBidsDefined = List<int>.generate(playerCount, (index) => index)
+        .where((index) => index != constrainedPlayerIndex)
+        .every((index) => row[index] != null);
+    if (!allOtherBidsDefined) {
+      return false;
+    }
+
+    final sum = List<int>.generate(playerCount, (index) => index).fold<int>(0, (total, index) {
+      if (index == constrainedPlayerIndex) return total + bid;
+      return total + (row[index] ?? 0);
+    });
     return sum == round.trickTarget;
   }
 
@@ -126,22 +125,27 @@ class MatchNotifier extends Notifier<Match?> {
   void resolveRound({
     required int roundIndex,
     required List<bool> roundFulfilled,
+    required List<int> roundTakenTricks,
   }) {
     final current = state;
     if (current == null || current.finished) return;
     if (roundFulfilled.length != current.players.length) return;
+    if (roundTakenTricks.length != current.players.length) return;
 
     final bids = current.bids[roundIndex];
     if (bids.any((bid) => bid == null)) return;
+    final maxTricks = current.rounds[roundIndex].trickTarget;
+    if (roundTakenTricks.any((tricks) => tricks < 0 || tricks > maxTricks)) return;
 
     final fulfilled = current.fulfilled.map((row) => [...row]).toList();
     final roundScores = current.roundScores.map((row) => [...row]).toList();
 
     for (var playerIndex = 0; playerIndex < current.players.length; playerIndex++) {
       final didFulfill = roundFulfilled[playerIndex];
+      final scoredTricks = didFulfill ? bids[playerIndex]! : roundTakenTricks[playerIndex];
       fulfilled[roundIndex][playerIndex] = didFulfill;
       roundScores[roundIndex][playerIndex] = calculatePoints(
-        bid: bids[playerIndex]!,
+        scoredTricks: scoredTricks,
         fulfilled: didFulfill,
       );
     }
@@ -153,12 +157,12 @@ class MatchNotifier extends Notifier<Match?> {
   }
 
   int calculatePoints({
-    required int bid,
+    required int scoredTricks,
     required bool fulfilled,
   }) {
     final pointsPerBaza = ref.read(settingsProvider).pointsPerBaza;
     return ScoreCalculator.calculate(
-      bid: bid,
+      bid: scoredTricks,
       fulfilled: fulfilled,
       pointsPerBaza: pointsPerBaza,
     );

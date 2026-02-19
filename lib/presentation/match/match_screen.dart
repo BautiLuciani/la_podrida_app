@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:la_podrida_app/application/providers/match_provider.dart';
@@ -13,154 +16,295 @@ class MatchScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchScreenState extends ConsumerState<MatchScreen> {
-  Future<void> _openBidDialog({
-    required Match match,
-    required int roundIndex,
-    required int playerIndex,
-  }) async {
-    final notifier = ref.read(matchProvider.notifier);
-    final round = match.rounds[roundIndex];
-    final currentBid = match.bids[roundIndex][playerIndex];
-    final controller = TextEditingController(text: currentBid?.toString() ?? '');
+  final Set<String> _invalidBidCells = <String>{};
+  final Map<String, TextEditingController> _bidControllers =
+      <String, TextEditingController>{};
+  final Map<String, FocusNode> _bidFocusNodes = <String, FocusNode>{};
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        int? parsed = currentBid;
-        bool invalid = false;
+  String _cellKey(int roundIndex, int playerIndex) => '${roundIndex}_$playerIndex';
 
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            void recomputeValidation() {
-              final bid = parsed;
-              if (bid == null) {
-                invalid = true;
-                return;
-              }
-              final forbidden = notifier.isBidForbidden(
-                roundIndex: roundIndex,
-                playerIndex: playerIndex,
-                bid: bid,
-              );
-              final zeroBlocked = notifier.isZeroBlocked(
-                roundIndex: roundIndex,
-                playerIndex: playerIndex,
-                bid: bid,
-              );
-              invalid = forbidden || zeroBlocked || bid < 0 || bid > round.trickTarget;
-            }
+  TextEditingController _getBidController(String key, String text) {
+    final controller = _bidControllers[key];
+    if (controller != null) {
+      return controller;
+    }
 
-            recomputeValidation();
+    final created = TextEditingController(text: text);
+    _bidControllers[key] = created;
+    return created;
+  }
 
-            return AlertDialog(
-              title: Text('Pedido de ${match.players[playerIndex].name}'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Ronda: ${round.number}  |  Bazas: ${round.trickTarget}'),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Pedido',
-                      errorText: invalid ? 'Pedido inválido para esta ronda' : null,
-                    ),
-                    onChanged: (value) {
-                      setModalState(() {
-                        parsed = int.tryParse(value);
-                      });
-                    },
-                  ),
-                  if (invalid)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Regla activa: el último jugador no puede completar la suma exacta ni violar 000.',
-                        style: TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                    ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: invalid || parsed == null
-                      ? null
-                      : () {
-                          notifier.setBid(
-                            roundIndex: roundIndex,
-                            playerIndex: playerIndex,
-                            bid: parsed!,
-                          );
-                          Navigator.of(context).pop();
-                        },
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+  FocusNode _getBidFocusNode(String key) {
+    final focusNode = _bidFocusNodes[key];
+    if (focusNode != null) {
+      return focusNode;
+    }
+
+    final created = FocusNode();
+    _bidFocusNodes[key] = created;
+    return created;
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _bidControllers.values) {
+      controller.dispose();
+    }
+    for (final focusNode in _bidFocusNodes.values) {
+      focusNode.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _resolveCurrentRound(Match match) async {
     final currentIndex = match.currentRoundIndex;
     final round = match.rounds[currentIndex];
-    final fulfilledValues = List<bool>.filled(match.players.length, false);
+    final fulfilledValues = List<bool?>.filled(match.players.length, null);
+    final trickControllers = List<TextEditingController>.generate(
+      match.players.length,
+      (playerIndex) => TextEditingController(
+        text: (match.bids[currentIndex][playerIndex] ?? 0).toString(),
+      ),
+    );
+    final notifier = ref.read(matchProvider.notifier);
 
-    final result = await showDialog<List<bool>>(
+    await showDialog<void>(
       context: context,
+      barrierColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return AlertDialog(
-              title: Text('Resolver ronda ${round.number}'),
-              content: SingleChildScrollView(
-                child: Column(
-                  children: List<Widget>.generate(
-                    match.players.length,
-                    (playerIndex) => CheckboxListTile(
-                      value: fulfilledValues[playerIndex],
-                      title: Text(match.players[playerIndex].name),
-                      subtitle: Text(
-                        'Pedido: ${match.bids[currentIndex][playerIndex]}',
-                      ),
-                      onChanged: (value) {
-                        setModalState(() {
-                          fulfilledValues[playerIndex] = value ?? false;
-                        });
-                      },
-                    ),
-                  ),
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Container(color: Colors.black.withValues(alpha: 0.18)),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(fulfilledValues),
-                  child: const Text('Confirmar'),
-                ),
-              ],
-            );
-          },
+            ),
+            StatefulBuilder(
+              builder: (context, setModalState) {
+                final hasMissingSelection = fulfilledValues.any((value) => value == null);
+                final hasInvalidInput = List<int>.generate(
+                  match.players.length,
+                  (index) => index,
+                ).any((playerIndex) {
+                  if (fulfilledValues[playerIndex] != false) return false;
+                  final value = int.tryParse(trickControllers[playerIndex].text);
+                  return value == null || value < 0 || value > round.trickTarget;
+                });
+
+                return Center(
+                  child: AlertDialog(
+                    backgroundColor: Colors.white,
+                    surfaceTintColor: Colors.white,
+                    title: Text(
+                      'Ronda ${round.number}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    content: SizedBox(
+                      width: 420,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            ...List<Widget>.generate(match.players.length, (playerIndex) {
+                              final bid = match.bids[currentIndex][playerIndex] ?? 0;
+                              final decision = fulfilledValues[playerIndex];
+                              final isFulfilled = decision == true;
+                              final isNotFulfilled = decision == false;
+                              final noFulfilledText = trickControllers[playerIndex].text;
+                              final parsedNoFulfilled = int.tryParse(noFulfilledText);
+                              final noFulfilledInvalid = isNotFulfilled &&
+                                  (parsedNoFulfilled == null ||
+                                      parsedNoFulfilled < 0 ||
+                                      parsedNoFulfilled > round.trickTarget);
+
+                              return Card(
+                                color: Colors.white,
+                                margin: const EdgeInsets.only(bottom: 12),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              match.players[playerIndex].name,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          Text('Pidio: $bid'),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: FilledButton.icon(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  fulfilledValues[playerIndex] = true;
+                                                  trickControllers[playerIndex].text = bid.toString();
+                                                });
+                                              },
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor: isFulfilled
+                                                    ? const Color(0xFF17C964)
+                                                    : const Color(0xFFE9E9EE),
+                                                foregroundColor: isFulfilled
+                                                    ? Colors.white
+                                                    : const Color(0xFF25314D),
+                                              ),
+                                              icon: const Icon(Icons.check, size: 16),
+                                              label: const Text('Cumplio'),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: FilledButton.icon(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  fulfilledValues[playerIndex] = false;
+                                                });
+                                              },
+                                              style: FilledButton.styleFrom(
+                                                backgroundColor: isNotFulfilled
+                                                    ? const Color(0xFFFF3B3B)
+                                                    : const Color(0xFFE9E9EE),
+                                                foregroundColor: isNotFulfilled
+                                                    ? Colors.white
+                                                    : const Color(0xFF25314D),
+                                              ),
+                                              icon: const Icon(Icons.close, size: 16),
+                                              label: const Text('No cumplio'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (isNotFulfilled) ...[
+                                        const SizedBox(height: 10),
+                                        TextField(
+                                          controller: trickControllers[playerIndex],
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.digitsOnly,
+                                          ],
+                                          textAlign: TextAlign.center,
+                                          decoration: InputDecoration(
+                                            hintText: 'Bazas que se llevo',
+                                            errorText: noFulfilledInvalid
+                                                ? 'Ingresa un valor entre 0 y ${round.trickTarget}'
+                                                : null,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 46,
+                                    child: ElevatedButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFFC7CBD3),
+                                        foregroundColor: Colors.black,
+                                      ),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: SizedBox(
+                                    height: 46,
+                                    child: ElevatedButton(
+                                      onPressed: (hasInvalidInput || hasMissingSelection)
+                                          ? null
+                                          : () {
+                                              try {
+                                                final normalizedFulfilled = <bool>[];
+                                                final normalizedTaken = <int>[];
+
+                                                for (var playerIndex = 0;
+                                                    playerIndex < match.players.length;
+                                                    playerIndex++) {
+                                                  final decision = fulfilledValues[playerIndex];
+                                                  if (decision == null) {
+                                                    return;
+                                                  }
+
+                                                  if (decision) {
+                                                    normalizedFulfilled.add(true);
+                                                    normalizedTaken.add(
+                                                      match.bids[currentIndex][playerIndex] ?? 0,
+                                                    );
+                                                    continue;
+                                                  }
+
+                                                  final parsed = int.tryParse(
+                                                    trickControllers[playerIndex].text,
+                                                  );
+                                                  if (parsed == null ||
+                                                      parsed < 0 ||
+                                                      parsed > round.trickTarget) {
+                                                    return;
+                                                  }
+
+                                                  normalizedFulfilled.add(false);
+                                                  normalizedTaken.add(parsed);
+                                                }
+
+                                                notifier.resolveRound(
+                                                  roundIndex: currentIndex,
+                                                  roundFulfilled: normalizedFulfilled,
+                                                  roundTakenTricks: normalizedTaken,
+                                                );
+                                                notifier.nextRound();
+                                                Navigator.of(context).pop();
+                                              } catch (_) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'No se pudo guardar la ronda. Intenta nuevamente.',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                      child: const Text('Guardar'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         );
       },
     );
-
-    if (result == null) return;
-
-    final notifier = ref.read(matchProvider.notifier);
-    notifier.resolveRound(roundIndex: currentIndex, roundFulfilled: result);
-    notifier.nextRound();
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      for (final controller in trickControllers) {
+        controller.dispose();
+      }
+    });
 
     if (notifier.isGameFinished() && mounted) {
       context.go('/results');
@@ -171,6 +315,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   Widget build(BuildContext context) {
     final match = ref.watch(matchProvider);
     final notifier = ref.read(matchProvider.notifier);
+    final tableWidth = (match?.players.length ?? 0) * 110 + 180;
 
     if (match == null) {
       return Scaffold(
@@ -185,13 +330,16 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Partida en juego')),
+      appBar: AppBar(
+        title: const Text('Tabla de Juego'),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            width: 170 + (match.players.length * 110),
+            width: tableWidth.toDouble(),
             child: Column(
               children: [
                 Card(
@@ -202,8 +350,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         const SizedBox(
                           width: 80,
                           child: Text(
-                            'Ronda',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                            '#',
+                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                         ...match.players.map(
@@ -218,12 +367,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                           ),
                         ),
                         const SizedBox(
-                          width: 90,
-                          child: Text(
-                            'Resolver',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
+                          width: 72,
+                          child: Icon(Icons.check, size: 18),
                         ),
                       ],
                     ),
@@ -237,9 +382,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       final round = match.rounds[roundIndex];
                       final isCurrentRound =
                           roundIndex == match.currentRoundIndex && !match.finished;
-                      final isResolved = match.fulfilled[roundIndex].every((value) => value != null);
+                      final isResolved =
+                          match.fulfilled[roundIndex].every((value) => value != null);
                       final canResolve =
-                          isCurrentRound && !isResolved && match.bids[roundIndex].every((bid) => bid != null);
+                          isCurrentRound &&
+                          !isResolved &&
+                          match.bids[roundIndex].every((bid) => bid != null);
 
                       return FadeInUp(
                         duration: const Duration(milliseconds: 280),
@@ -251,61 +399,172 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                               children: [
                                 SizedBox(
                                   width: 80,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('R${round.number}'),
-                                      Text(
-                                        '${round.trickTarget} bazas',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    '${round.trickTarget}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                                 ...List<Widget>.generate(
                                   match.players.length,
                                   (playerIndex) {
                                     final bid = match.bids[roundIndex][playerIndex];
-                                    final fulfilled = match.fulfilled[roundIndex][playerIndex];
-                                    final score = match.roundScores[roundIndex][playerIndex];
+                                    final fulfilled =
+                                        match.fulfilled[roundIndex][playerIndex];
+                                    final isEditable = isCurrentRound && !isResolved;
+                                    final isStarter = playerIndex == round.starterIndex;
+                                    final cellKey = _cellKey(roundIndex, playerIndex);
+                                    final hasError = _invalidBidCells.contains(cellKey);
 
                                     Color fillColor = Colors.white;
                                     if (fulfilled == true) fillColor = Colors.green.shade100;
                                     if (fulfilled == false) fillColor = Colors.red.shade100;
+                                    if (hasError) fillColor = Colors.red.shade100;
 
-                                    final isEditable = isCurrentRound && !isResolved;
+                                    final expectedText = bid?.toString() ?? '';
+                                    final controller =
+                                        _getBidController(cellKey, expectedText);
+                                    final focusNode = _getBidFocusNode(cellKey);
+
+                                    if (!focusNode.hasFocus &&
+                                        !_invalidBidCells.contains(cellKey) &&
+                                        controller.text != expectedText) {
+                                      controller.text = expectedText;
+                                      controller.selection = TextSelection.collapsed(
+                                        offset: controller.text.length,
+                                      );
+                                    }
 
                                     return SizedBox(
                                       width: 110,
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 4),
-                                        child: InkWell(
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
                                           onTap: isEditable
-                                              ? () => _openBidDialog(
-                                                    match: match,
-                                                    roundIndex: roundIndex,
-                                                    playerIndex: playerIndex,
-                                                  )
+                                              ? () => FocusScope.of(context)
+                                                  .requestFocus(focusNode)
                                               : null,
-                                          borderRadius: BorderRadius.circular(10),
                                           child: Container(
                                             height: 46,
                                             decoration: BoxDecoration(
                                               color: fillColor,
-                                              border: Border.all(color: const Color(0xFFD9D9D9)),
+                                              border: Border.all(
+                                                color: const Color(0xFFD9D9D9),
+                                              ),
                                               borderRadius: BorderRadius.circular(10),
                                             ),
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              bid == null
-                                                  ? '-'
-                                                  : score == null
-                                                      ? '$bid'
-                                                      : '$bid | $score',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                color: isEditable ? Colors.black : Colors.black87,
-                                              ),
+                                            child: Stack(
+                                              children: [
+                                                Align(
+                                                  alignment: Alignment.center,
+                                                  child: isEditable
+                                                      ? TextField(
+                                                          controller: controller,
+                                                          focusNode: focusNode,
+                                                          keyboardType: TextInputType.number,
+                                                          textInputAction: TextInputAction.done,
+                                                          inputFormatters: [
+                                                            FilteringTextInputFormatter.digitsOnly,
+                                                          ],
+                                                          textAlign: TextAlign.center,
+                                                          style: const TextStyle(
+                                                            fontWeight: FontWeight.w700,
+                                                          ),
+                                                          decoration: const InputDecoration(
+                                                            filled: false,
+                                                            border: InputBorder.none,
+                                                            enabledBorder: InputBorder.none,
+                                                            focusedBorder: InputBorder.none,
+                                                            disabledBorder: InputBorder.none,
+                                                            errorBorder: InputBorder.none,
+                                                            focusedErrorBorder:
+                                                                InputBorder.none,
+                                                            isDense: true,
+                                                            contentPadding:
+                                                                EdgeInsets.zero,
+                                                          ),
+                                                          onTapOutside: (_) {
+                                                            focusNode.unfocus();
+                                                            if (_invalidBidCells
+                                                                .contains(cellKey)) {
+                                                              setState(() {
+                                                                _invalidBidCells
+                                                                    .remove(cellKey);
+                                                                controller.text =
+                                                                    expectedText;
+                                                              });
+                                                            }
+                                                          },
+                                                          onChanged: (value) {
+                                                            if (value.isEmpty) {
+                                                              if (_invalidBidCells
+                                                                  .contains(cellKey)) {
+                                                                setState(() {
+                                                                  _invalidBidCells
+                                                                      .remove(cellKey);
+                                                                });
+                                                              }
+                                                              return;
+                                                            }
+
+                                                            final parsed =
+                                                                int.tryParse(value);
+                                                            if (parsed == null) {
+                                                              setState(() {
+                                                                _invalidBidCells
+                                                                    .add(cellKey);
+                                                              });
+                                                              return;
+                                                            }
+
+                                                            final success =
+                                                                notifier.setBid(
+                                                              roundIndex:
+                                                                  roundIndex,
+                                                              playerIndex:
+                                                                  playerIndex,
+                                                              bid: parsed,
+                                                            );
+                                                            setState(() {
+                                                              if (success) {
+                                                                _invalidBidCells
+                                                                    .remove(cellKey);
+                                                              } else {
+                                                                _invalidBidCells
+                                                                    .add(cellKey);
+                                                              }
+                                                            });
+                                                          },
+                                                        )
+                                                      : Text(
+                                                          bid == null
+                                                              ? '-'
+                                                              : '$bid',
+                                                          style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.black87,
+                                                          ),
+                                                        ),
+                                                ),
+                                                if (isStarter)
+                                                  const Positioned(
+                                                    right: 6,
+                                                    top: 2,
+                                                    child: Text(
+                                                      '*',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -314,10 +573,27 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                   },
                                 ),
                                 SizedBox(
-                                  width: 90,
-                                  child: ElevatedButton(
-                                    onPressed: canResolve ? () => _resolveCurrentRound(match) : null,
-                                    child: const Text('OK'),
+                                  width: 72,
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 44,
+                                      height: 40,
+                                      child: ElevatedButton(
+                                        onPressed: canResolve
+                                            ? () => _resolveCurrentRound(match)
+                                            : null,
+                                        style: ElevatedButton.styleFrom(
+                                          minimumSize: Size.zero,
+                                          padding: EdgeInsets.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        child: const Icon(Icons.check, size: 18),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -351,7 +627,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 90),
+                        const SizedBox(width: 72),
                       ],
                     ),
                   ),
