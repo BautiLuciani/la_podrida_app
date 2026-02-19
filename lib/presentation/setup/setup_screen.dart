@@ -74,93 +74,165 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     final hasInvalidNames = setupState.players.any(
       (player) => player.name.trim().isEmpty,
     );
+    final canAddPlayer = setupState.players.length < MatchSetupNotifier.maxPlayers;
+    final maxListHeight = MediaQuery.sizeOf(context).height * 0.5;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurar partida')),
       body: FadeInUp(
         duration: const Duration(milliseconds: 320),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Expanded(
-                child: ReorderableListView.builder(
-                  itemCount: setupState.players.length,
-                  onReorder: (oldIndex, newIndex) {
-                    _handleReorder(setupNotifier, oldIndex, newIndex);
-                  },
-                  onReorderStart: (_) => _dismissKeyboard(),
-                  buildDefaultDragHandles: false,
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemBuilder: (context, index) {
-                    final player = setupState.players[index];
-                    final canRemove =
-                        setupState.players.length >
-                        MatchSetupNotifier.minPlayers;
-
-                    return Card(
-                      key: ValueKey(player.id),
-                      child: ListTile(
-                        leading: ReorderableDragStartListener(
-                          index: index,
-                          child: const Icon(Icons.drag_indicator),
-                        ),
-                        title: TextField(
-                          controller: _controllers[player.id],
-                          onTapOutside: (_) => _dismissKeyboard(),
-                          decoration: InputDecoration(
-                            labelText: 'Jugador ${index + 1}',
-                          ),
-                          onChanged: (value) {
-                            setupNotifier.updatePlayerName(player.id, value);
-                          },
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: canRemove
-                              ? () => setupNotifier.removePlayer(player.id)
-                              : null,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => context.go('/'),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      label: const Text(
+                        'Volver',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    );
-                  },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                onPressed:
-                    setupState.players.length < MatchSetupNotifier.maxPlayers
-                    ? setupNotifier.addPlayer
-                    : null,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Agregar jugador'),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: hasInvalidNames
-                    ? null
-                    : () async {
-                        final players = setupState.players
-                            .map(
-                              (player) =>
-                                  player.copyWith(name: player.name.trim()),
-                            )
-                            .toList();
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxListHeight),
+                  child: ReorderableListView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    physics: setupState.players.length >= 7
+                        ? const AlwaysScrollableScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
+                    itemCount: setupState.players.length,
+                    onReorder: (oldIndex, newIndex) {
+                      _handleReorder(setupNotifier, oldIndex, newIndex);
+                    },
+                    onReorderStart: (_) => _dismissKeyboard(),
+                    buildDefaultDragHandles: false,
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    itemBuilder: (context, index) {
+                      final player = setupState.players[index];
+                      final canRemove =
+                          setupState.players.length > MatchSetupNotifier.minPlayers;
 
-                        await ref
-                            .read(settingsProvider.notifier)
-                            .setLastPlayers(
-                              players.map((player) => player.name).toList(),
-                            );
+                      return Container(
+                        key: ValueKey(player.id),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black54),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controllers[player.id],
+                                onTapOutside: (_) => _dismissKeyboard(),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  setupNotifier.updatePlayerName(player.id, value);
+                                },
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: canRemove
+                                  ? () => setupNotifier.removePlayer(player.id)
+                                  : null,
+                            ),
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Icon(Icons.drag_indicator),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: canAddPlayer ? setupNotifier.addPlayer : null,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 15,
+                    ),
+                    decoration: BoxDecoration(
+                      color: canAddPlayer
+                          ? const Color(0xFFFFFFFF)
+                          : const Color(0xFFE7E7E7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.black54),
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Agregar Jugador',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        Icon(Icons.add, size: 28),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: hasInvalidNames
+                      ? null
+                      : () async {
+                          final players = setupState.players
+                              .map(
+                                (player) =>
+                                    player.copyWith(name: player.name.trim()),
+                              )
+                              .toList();
 
-                        ref.read(matchProvider.notifier).startMatch(players);
-                        if (context.mounted) {
-                          context.push('/match');
-                        }
-                      },
-                child: const Text('Jugar'),
-              ),
-            ],
+                          await ref
+                              .read(settingsProvider.notifier)
+                              .setLastPlayers(
+                                players.map((player) => player.name).toList(),
+                              );
+
+                          ref.read(matchProvider.notifier).startMatch(players);
+                          if (context.mounted) {
+                            context.push('/match');
+                          }
+                        },
+                  child: const Text('Jugar'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
