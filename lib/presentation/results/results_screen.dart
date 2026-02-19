@@ -31,7 +31,6 @@ class ResultsScreen extends ConsumerWidget {
     )..sort((a, b) => b.score.compareTo(a.score));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ranking final')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: BounceIn(
@@ -39,10 +38,13 @@ class ResultsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Resultados',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                textAlign: TextAlign.center,
+              Padding(
+                padding: const EdgeInsets.only(top: 30),
+                child: const Text(
+                  'Resultados',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+                  textAlign: TextAlign.center,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -74,7 +76,7 @@ class ResultsScreen extends ConsumerWidget {
                   ref.read(matchProvider.notifier).clearMatch();
                   context.go('/');
                 },
-                child: const Text('Volver al home'),
+                child: const Text('Volver al inicio'),
               ),
             ],
           ),

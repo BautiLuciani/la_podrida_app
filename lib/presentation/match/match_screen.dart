@@ -56,6 +56,83 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     super.dispose();
   }
 
+  Future<bool> _confirmExitMatch() async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Container(color: Colors.black.withValues(alpha: 0.18)),
+                ),
+              ),
+            ),
+            Center(
+              child: AlertDialog(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                title: const Text('Salir de la partida'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Si salis ahora, se va a descartar la partida en curso. ¿Querés continuar?',
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFC7CBD3),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: SizedBox(
+                            height: 46,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Salir'),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldExit == true) {
+      ref.read(matchProvider.notifier).clearMatch();
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _handlePopAttempt() async {
+    final shouldExit = await _confirmExitMatch();
+    if (shouldExit && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _resolveCurrentRound(Match match) async {
     final currentIndex = match.currentRoundIndex;
     final round = match.rounds[currentIndex];
@@ -63,7 +140,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     final trickControllers = List<TextEditingController>.generate(
       match.players.length,
       (playerIndex) => TextEditingController(
-        text: (match.bids[currentIndex][playerIndex] ?? 0).toString(),
+        text: '',
       ),
     );
     final notifier = ref.read(matchProvider.notifier);
@@ -113,12 +190,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                               final decision = fulfilledValues[playerIndex];
                               final isFulfilled = decision == true;
                               final isNotFulfilled = decision == false;
-                              final noFulfilledText = trickControllers[playerIndex].text;
-                              final parsedNoFulfilled = int.tryParse(noFulfilledText);
-                              final noFulfilledInvalid = isNotFulfilled &&
-                                  (parsedNoFulfilled == null ||
-                                      parsedNoFulfilled < 0 ||
-                                      parsedNoFulfilled > round.trickTarget);
 
                               return Card(
                                 color: Colors.white,
@@ -149,7 +220,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                               onPressed: () {
                                                 setModalState(() {
                                                   fulfilledValues[playerIndex] = true;
-                                                  trickControllers[playerIndex].text = bid.toString();
+                                                  trickControllers[playerIndex].text = '';
                                                 });
                                               },
                                               style: FilledButton.styleFrom(
@@ -170,6 +241,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                               onPressed: () {
                                                 setModalState(() {
                                                   fulfilledValues[playerIndex] = false;
+                                                  trickControllers[playerIndex].clear();
                                                 });
                                               },
                                               style: FilledButton.styleFrom(
@@ -195,11 +267,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                             FilteringTextInputFormatter.digitsOnly,
                                           ],
                                           textAlign: TextAlign.center,
-                                          decoration: InputDecoration(
+                                          decoration: const InputDecoration(
                                             hintText: 'Bazas que se llevo',
-                                            errorText: noFulfilledInvalid
-                                                ? 'Ingresa un valor entre 0 y ${round.trickTarget}'
-                                                : null,
                                           ),
                                         ),
                                       ],
@@ -329,12 +398,18 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tabla de Juego'),
-        centerTitle: true,
-      ),
-      body: Padding(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handlePopAttempt();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Tabla de Juego'),
+          centerTitle: true,
+        ),
+        body: Padding(
         padding: const EdgeInsets.all(12),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -635,6 +710,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
