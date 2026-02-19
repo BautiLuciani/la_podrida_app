@@ -109,6 +109,30 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                 ConstrainedBox(
                   constraints: BoxConstraints(maxHeight: maxListHeight),
                   child: ReorderableListView.builder(
+                    proxyDecorator: (child, index, animation) {
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, _) {
+                          return Material(
+                            color: Colors.transparent,
+                            elevation: 0,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x24000000),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                      );
+                    },
                     shrinkWrap: true,
                     padding: EdgeInsets.zero,
                     physics: setupState.players.length >= 7
