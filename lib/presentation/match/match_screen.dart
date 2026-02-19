@@ -270,6 +270,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                           decoration: const InputDecoration(
                                             hintText: 'Bazas que se llevo',
                                           ),
+                                          onChanged: (_) {
+                                            setModalState(() {});
+                                          },
                                         ),
                                       ],
                                     ],
@@ -489,7 +492,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     final bid = match.bids[roundIndex][playerIndex];
                                     final fulfilled =
                                         match.fulfilled[roundIndex][playerIndex];
-                                    final isEditable = isCurrentRound && !isResolved;
+                                    final isEditable = isCurrentRound &&
+                                        !isResolved &&
+                                        notifier.canPlayerBid(
+                                          roundIndex: roundIndex,
+                                          playerIndex: playerIndex,
+                                        );
                                     final isStarter = playerIndex == round.starterIndex;
                                     final cellKey = _cellKey(roundIndex, playerIndex);
                                     final hasError = _invalidBidCells.contains(cellKey);

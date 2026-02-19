@@ -58,6 +58,7 @@ class MatchNotifier extends Notifier<Match?> {
     if (current == null || current.finished) return false;
     if (roundIndex < 0 || roundIndex >= current.rounds.length) return false;
     if (playerIndex < 0 || playerIndex >= current.players.length) return false;
+    if (!canPlayerBid(roundIndex: roundIndex, playerIndex: playerIndex)) return false;
 
     final trickTarget = current.rounds[roundIndex].trickTarget;
     if (bid < 0 || bid > trickTarget) return false;
@@ -71,6 +72,33 @@ class MatchNotifier extends Notifier<Match?> {
     final bids = current.bids.map((row) => [...row]).toList();
     bids[roundIndex][playerIndex] = bid;
     state = current.copyWith(bids: bids);
+    return true;
+  }
+
+  bool canPlayerBid({
+    required int roundIndex,
+    required int playerIndex,
+  }) {
+    final current = state;
+    if (current == null) return false;
+    if (roundIndex < 0 || roundIndex >= current.rounds.length) return false;
+    if (playerIndex < 0 || playerIndex >= current.players.length) return false;
+
+    final round = current.rounds[roundIndex];
+    final row = current.bids[roundIndex];
+    final playerCount = current.players.length;
+    final order = List<int>.generate(
+      playerCount,
+      (index) => (round.starterIndex + index) % playerCount,
+    );
+    final position = order.indexOf(playerIndex);
+    if (position < 0) return false;
+
+    for (var index = 0; index < position; index++) {
+      if (row[order[index]] == null) {
+        return false;
+      }
+    }
     return true;
   }
 
