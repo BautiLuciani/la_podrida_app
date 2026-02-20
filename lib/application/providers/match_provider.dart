@@ -15,7 +15,11 @@ class MatchNotifier extends Notifier<Match?> {
   }
 
   void startMatch(List<Player> players) {
-    final roundsData = RoundGenerator.generate(players.length);
+    final settings = ref.read(settingsProvider);
+    final roundsData = RoundGenerator.generate(
+      players.length,
+      extraRound: settings.extraRound,
+    );
     final rounds = List<Round>.generate(
       roundsData.length,
       (index) => Round(

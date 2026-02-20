@@ -7,6 +7,7 @@ final localStorageServiceProvider = Provider<LocalStorageService>(
 
 class LocalStorageService {
   static const _blockFourZerosKey = 'blockFourZeros';
+  static const _extraRoundKey = 'extraRound';
   static const _pointsPerBazaKey = 'pointsPerBaza';
   static const _lastPlayersKey = 'lastPlayers';
 
@@ -18,6 +19,16 @@ class LocalStorageService {
   Future<bool?> getBlockFourZeros() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_blockFourZerosKey);
+  }
+
+  Future<void> saveExtraRound(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_extraRoundKey, value);
+  }
+
+  Future<bool?> getExtraRound() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_extraRoundKey);
   }
 
   Future<void> savePointsPerBaza(int value) async {

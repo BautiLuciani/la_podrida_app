@@ -24,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
             Card(
               child: SwitchListTile(
                 value: settings.blockFourZeros,
-                title: const Text('Regla 000'),
+                title: const Text('Regla 000', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 subtitle: const Text('Bloquear 4 rondas seguidas pidiendo 0'),
                 onChanged: (_) => settingsNotifier.toggleBlockFourZeros(),
               ),
@@ -54,6 +54,15 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: SwitchListTile(
+                value: settings.extraRound,
+                title: const Text('Ronda Extra', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Ronda extra al final de la partida. Los jugadores deben pedir bazas sin ver sus cartas.'),
+                onChanged: (_) => settingsNotifier.toggleExtraRound(),
               ),
             ),
           ],
