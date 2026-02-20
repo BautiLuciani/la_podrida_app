@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:la_podrida_app/application/providers/match_provider.dart';
+import 'package:la_podrida_app/application/providers/ranking_provider.dart';
 import 'package:la_podrida_app/domain/models/match.dart';
 
 class MatchScreen extends ConsumerStatefulWidget {
@@ -383,6 +384,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     });
 
     if (notifier.isGameFinished() && mounted) {
+      final completedMatch = ref.read(matchProvider);
+      if (completedMatch != null) {
+        await ref.read(rankingProvider.notifier).addMatchResult(completedMatch);
+      }
+      if (!mounted) return;
       context.go('/results');
     }
   }

@@ -73,11 +73,7 @@ class HomeScreen extends StatelessWidget {
                                 child: SizedBox(
                                   height: 64,
                                   child: OutlinedButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Ranking global - pronto')),
-                                      );
-                                    },
+                                    onPressed: () => context.push('/ranking'),
                                     style: OutlinedButton.styleFrom(
                                       backgroundColor: Colors.white,
                                       side: const BorderSide(color: Colors.black54),
@@ -86,7 +82,7 @@ class HomeScreen extends StatelessWidget {
                                       ),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    child: const Icon(Icons.emoji_events_outlined, color: Colors.black),
+                                    child: const Icon(Icons.workspace_premium_rounded, color: Colors.black),
                                   ),
                                 ),
                               ),

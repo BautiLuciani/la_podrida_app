@@ -1,6 +1,7 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:la_podrida_app/application/providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -13,6 +14,16 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 120,
+        leading: TextButton.icon(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          label: const Text(
+            'Volver',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+          ),
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+        ),
         title: const Text('Ajustes'),
         centerTitle: true,
       ),
