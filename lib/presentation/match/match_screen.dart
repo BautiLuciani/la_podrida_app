@@ -170,6 +170,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                   final value = int.tryParse(trickControllers[playerIndex].text);
                   return value == null || value < 0 || value > round.trickTarget;
                 });
+                final isSmallScreen = MediaQuery.sizeOf(context).width < 390;
+                final buttonIconSize = isSmallScreen ? 14.0 : 16.0;
 
                 return Center(
                   child: AlertDialog(
@@ -216,7 +218,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                       Row(
                                         children: [
                                           Expanded(
-                                            child: FilledButton.icon(
+                                            child: FilledButton(
                                               onPressed: () {
                                                 setModalState(() {
                                                   fulfilledValues[playerIndex] = true;
@@ -230,14 +232,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                 foregroundColor: isFulfilled
                                                     ? Colors.white
                                                     : const Color(0xFF25314D),
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                minimumSize: const Size.fromHeight(42),
                                               ),
-                                              icon: const Icon(Icons.check, size: 16),
-                                              label: const Text('Cumplio'),
+                                              child: Icon(Icons.check, size: buttonIconSize),
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
-                                            child: FilledButton.icon(
+                                            child: FilledButton(
                                               onPressed: () {
                                                 setModalState(() {
                                                   fulfilledValues[playerIndex] = false;
@@ -251,9 +254,10 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                 foregroundColor: isNotFulfilled
                                                     ? Colors.white
                                                     : const Color(0xFF25314D),
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                minimumSize: const Size.fromHeight(42),
                                               ),
-                                              icon: const Icon(Icons.close, size: 16),
-                                              label: const Text('No cumplio'),
+                                              child: Icon(Icons.close, size: buttonIconSize),
                                             ),
                                           ),
                                         ],

@@ -75,7 +75,6 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
       (player) => player.name.trim().isEmpty,
     );
     final canAddPlayer = setupState.players.length < MatchSetupNotifier.maxPlayers;
-    final maxListHeight = MediaQuery.sizeOf(context).height * 0.5;
 
     return Scaffold(
       body: FadeInUp(
@@ -106,8 +105,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: maxListHeight),
+                Expanded(
                   child: ReorderableListView.builder(
                     proxyDecorator: (child, index, animation) {
                       return AnimatedBuilder(
@@ -133,19 +131,53 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                         },
                       );
                     },
-                    shrinkWrap: true,
                     padding: EdgeInsets.zero,
-                    physics: setupState.players.length >= 7
-                        ? const AlwaysScrollableScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
-                    itemCount: setupState.players.length,
+                    itemCount: setupState.players.length + 1,
                     onReorder: (oldIndex, newIndex) {
+                      final playersLength = setupState.players.length;
+                      if (oldIndex >= playersLength || newIndex > playersLength) return;
                       _handleReorder(setupNotifier, oldIndex, newIndex);
                     },
                     onReorderStart: (_) => _dismissKeyboard(),
                     buildDefaultDragHandles: false,
                     keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                     itemBuilder: (context, index) {
+                      if (index == setupState.players.length) {
+                        return InkWell(
+                          key: const ValueKey('add_player_footer'),
+                          onTap: canAddPlayer ? setupNotifier.addPlayer : null,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 15,
+                            ),
+                            decoration: BoxDecoration(
+                              color: canAddPlayer
+                                  ? const Color(0xFFFFFFFF)
+                                  : const Color(0xFFE7E7E7),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.black54),
+                            ),
+                            child: const Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Agregar Jugador',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                Icon(Icons.add, size: 28),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
                       final player = setupState.players[index];
                       final canRemove =
                           setupState.players.length > MatchSetupNotifier.minPlayers;
@@ -201,35 +233,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     },
                   ),
                 ),
-                InkWell(
-                  onTap: canAddPlayer ? setupNotifier.addPlayer : null,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 15,
-                    ),
-                    decoration: BoxDecoration(
-                      color: canAddPlayer
-                          ? const Color(0xFFFFFFFF)
-                          : const Color(0xFFE7E7E7),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.black54),
-                    ),
-                    child: const Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Agregar Jugador',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                        ),
-                        Icon(Icons.add, size: 28),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
+                const SizedBox(height: 14),
                 ElevatedButton(
                   onPressed: hasInvalidNames
                       ? null
