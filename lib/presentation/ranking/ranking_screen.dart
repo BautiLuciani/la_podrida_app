@@ -1,4 +1,4 @@
-﻿import 'package:animate_do/animate_do.dart';
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,7 +26,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Se eliminaran todos los puntos del ranking.'),
+            const Text('Se eliminaran todos los datos del ranking.'),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -64,34 +64,64 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       await ref.read(rankingProvider.notifier).clearHistory();
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final rankingState = ref.watch(rankingProvider);
-    final entries = rankingState.pointsByPlayer.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final entries = rankingState.statsByPlayer.entries
+        .where((entry) => entry.value.matchesPlayed > 0)
+        .toList()
+      ..sort((a, b) {
+        final averageCompare = b.value.averagePoints.compareTo(a.value.averagePoints);
+        if (averageCompare != 0) return averageCompare;
 
-    Color backgroundFor(int index) {
-      if (index == 0) return const Color(0xFFFFF4CC);
-      if (index == 1) return const Color(0xFFF0F2F5);
-      if (index == 2) return const Color(0xFFFFE8D6);
+        final matchesCompare = b.value.matchesPlayed.compareTo(a.value.matchesPlayed);
+        if (matchesCompare != 0) return matchesCompare;
+
+        return b.value.winRate.compareTo(a.value.winRate);
+      });
+
+    final winRateOrder = List.of(entries)
+      ..sort((a, b) {
+        final winRateCompare = b.value.winRate.compareTo(a.value.winRate);
+        if (winRateCompare != 0) return winRateCompare;
+
+        final winsCompare = b.value.wins.compareTo(a.value.wins);
+        if (winsCompare != 0) return winsCompare;
+
+        return b.value.averagePoints.compareTo(a.value.averagePoints);
+      });
+
+    final podiumByPlayer = <String, int>{};
+    for (var i = 0; i < winRateOrder.length && i < 3; i++) {
+      podiumByPlayer[winRateOrder[i].key] = i;
+    }
+
+    Color backgroundFor(String playerName) {
+      final podiumRank = podiumByPlayer[playerName];
+      if (podiumRank == 0) return const Color(0xFFFFF4CC);
+      if (podiumRank == 1) return const Color(0xFFF0F2F5);
+      if (podiumRank == 2) return const Color(0xFFFFE8D6);
       return Colors.white;
     }
 
-    Color borderFor(int index) {
-      if (index == 0) return const Color(0xFFE3AA00);
-      if (index == 1) return const Color(0xFFA7B0BB);
-      if (index == 2) return const Color(0xFFD4702A);
+    Color borderFor(String playerName) {
+      final podiumRank = podiumByPlayer[playerName];
+      if (podiumRank == 0) return const Color(0xFFE3AA00);
+      if (podiumRank == 1) return const Color(0xFFA7B0BB);
+      if (podiumRank == 2) return const Color(0xFFD4702A);
       return const Color(0xFFD3D7DE);
     }
 
-    Widget leadingFor(int index) {
-      if (index == 0) {
+    Widget leadingFor(int index, String playerName) {
+      final podiumRank = podiumByPlayer[playerName];
+      if (podiumRank == 0) {
         return const Icon(Icons.workspace_premium_rounded, color: Color(0xFFE3AA00));
       }
-      if (index == 1) {
+      if (podiumRank == 1) {
         return const Icon(Icons.military_tech_outlined, color: Color(0xFFA7B0BB));
       }
-      if (index == 2) {
+      if (podiumRank == 2) {
         return const Icon(Icons.military_tech_outlined, color: Color(0xFFD4702A));
       }
       return Text(
@@ -136,7 +166,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                 ),
                 const SizedBox(height: 2),
                 const Text(
-                  'Jugadores con más puntos',
+                  'Ordenado por promedio de puntos',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 20, color: Color(0xFF5B6680)),
                 ),
@@ -149,11 +179,14 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                           separatorBuilder: (_, _) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final entry = entries[index];
+                            final stats = entry.value;
+                            final winRatePercent = (stats.winRate * 100).toStringAsFixed(0);
+
                             return Container(
                               decoration: BoxDecoration(
-                                color: backgroundFor(index),
+                                color: backgroundFor(entry.key),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderFor(index)),
+                                border: Border.all(color: borderFor(entry.key)),
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -162,17 +195,30 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    leadingFor(index),
+                                    leadingFor(index, entry.key),
                                     const SizedBox(width: 12),
                                     Expanded(
-                                      child: Text(
-                                        entry.key,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 25,
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            entry.key,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 25,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            '${stats.wins}/${stats.matchesPlayed} victorias ($winRatePercent%)',
+                                            style: const TextStyle(
+                                              color: Color(0xFF5B6680),
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -181,16 +227,16 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Text(
-                                          '${entry.value}',
+                                          stats.averagePoints.toStringAsFixed(2),
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w800,
-                                            fontSize: 38,
+                                            fontSize: 32,
                                             height: 1,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
                                         const Text(
-                                          'Puntos',
+                                          'Promedio',
                                           style: TextStyle(
                                             color: Color(0xFF5B6680),
                                             fontSize: 13,
@@ -242,7 +288,7 @@ class _EmptyRankingView extends StatelessWidget {
             Icon(Icons.emoji_events_outlined, size: 90, color: Color(0xFFBFC5D2)),
             SizedBox(height: 12),
             Text(
-              'Aún no hay partidas completadas',
+              'Aun no hay partidas completadas',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 24,
@@ -252,7 +298,7 @@ class _EmptyRankingView extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              '¡Juega para aparecer en el ranking!',
+              'Juega para aparecer en el ranking',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 17, color: Color(0xFF7C86A0)),
             ),
@@ -262,4 +308,3 @@ class _EmptyRankingView extends StatelessWidget {
     );
   }
 }
-

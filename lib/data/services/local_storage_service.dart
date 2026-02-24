@@ -71,7 +71,55 @@ class LocalStorageService {
       return <String, int>{};
     }
 
-    return decoded.map((key, value) => MapEntry(key, (value as num).toInt()));
+    final result = <String, int>{};
+    decoded.forEach((key, value) {
+      if (value is num) {
+        result[key] = value.toInt();
+      } else if (value is Map<String, dynamic>) {
+        result[key] = (value['totalPoints'] as num?)?.toInt() ?? 0;
+      }
+    });
+    return result;
+  }
+
+  Future<void> saveRankingStats(Map<String, Map<String, int>> statsByPlayer) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_rankingPointsKey, jsonEncode(statsByPlayer));
+  }
+
+  Future<Map<String, Map<String, int>>> getRankingStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_rankingPointsKey);
+    if (raw == null || raw.isEmpty) {
+      return <String, Map<String, int>>{};
+    }
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      return <String, Map<String, int>>{};
+    }
+
+    final result = <String, Map<String, int>>{};
+    decoded.forEach((key, value) {
+      if (value is num) {
+        result[key] = <String, int>{
+          'totalPoints': value.toInt(),
+          'matchesPlayed': 1,
+          'wins': 0,
+        };
+        return;
+      }
+
+      if (value is Map<String, dynamic>) {
+        result[key] = <String, int>{
+          'totalPoints': (value['totalPoints'] as num?)?.toInt() ?? 0,
+          'matchesPlayed': (value['matchesPlayed'] as num?)?.toInt() ?? 0,
+          'wins': (value['wins'] as num?)?.toInt() ?? 0,
+        };
+      }
+    });
+
+    return result;
   }
 
   Future<void> clearRankingPoints() async {
