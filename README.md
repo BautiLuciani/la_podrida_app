@@ -79,7 +79,7 @@ lib/
 ## 👨‍💻 Autor
 
 Bautista Luciani - [@BautiLuciani](https://github.com/BautiLuciani)  
-Desarrollador de Software
+Desarrollador de Software  
 LinkedIn: https://www.linkedin.com/in/bautistalucianibroquen/ 
 
 
