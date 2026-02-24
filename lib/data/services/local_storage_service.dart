@@ -82,39 +82,65 @@ class LocalStorageService {
     return result;
   }
 
-  Future<void> saveRankingStats(Map<String, Map<String, int>> statsByPlayer) async {
+  Future<void> saveRankingStats(Map<String, Map<String, dynamic>> statsByPlayer) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_rankingPointsKey, jsonEncode(statsByPlayer));
   }
 
-  Future<Map<String, Map<String, int>>> getRankingStats() async {
+  Future<Map<String, Map<String, dynamic>>> getRankingStats() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_rankingPointsKey);
     if (raw == null || raw.isEmpty) {
-      return <String, Map<String, int>>{};
+      return <String, Map<String, dynamic>>{};
     }
 
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic>) {
-      return <String, Map<String, int>>{};
+      return <String, Map<String, dynamic>>{};
     }
 
-    final result = <String, Map<String, int>>{};
+    final result = <String, Map<String, dynamic>>{};
     decoded.forEach((key, value) {
       if (value is num) {
-        result[key] = <String, int>{
+        result[key] = <String, dynamic>{
           'totalPoints': value.toInt(),
           'matchesPlayed': 1,
           'wins': 0,
+          'rankingHistory': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'dateIso': '',
+              'playersCount': 0,
+              'place': 0,
+              'rankingPoints': value.toInt(),
+            },
+          ],
         };
         return;
       }
 
       if (value is Map<String, dynamic>) {
-        result[key] = <String, int>{
+        final rawHistory = value['rankingHistory'];
+        final parsedHistory = <dynamic>[];
+        if (rawHistory is List) {
+          for (final historyEntry in rawHistory) {
+            if (historyEntry is num) {
+              parsedHistory.add(historyEntry.toInt());
+            } else if (historyEntry is Map<String, dynamic>) {
+              parsedHistory.add(<String, dynamic>{
+                'dateIso': historyEntry['dateIso'] as String? ?? '',
+                'playersCount': (historyEntry['playersCount'] as num?)?.toInt() ?? 0,
+                'place': (historyEntry['place'] as num?)?.toInt() ?? 0,
+                'rankingPoints': (historyEntry['rankingPoints'] as num?)?.toInt() ?? 0,
+              });
+            }
+          }
+        }
+
+        result[key] = <String, dynamic>{
           'totalPoints': (value['totalPoints'] as num?)?.toInt() ?? 0,
           'matchesPlayed': (value['matchesPlayed'] as num?)?.toInt() ?? 0,
           'wins': (value['wins'] as num?)?.toInt() ?? 0,
+          'rankingHistory': parsedHistory,
         };
       }
     });

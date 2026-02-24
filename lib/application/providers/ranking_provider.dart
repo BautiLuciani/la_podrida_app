@@ -26,11 +26,13 @@ class PlayerRankingStats {
     required this.totalPoints,
     required this.matchesPlayed,
     required this.wins,
+    required this.rankingHistory,
   });
 
   final int totalPoints;
   final int matchesPlayed;
   final int wins;
+  final List<RankingMatchHistoryEntry> rankingHistory;
 
   double get averagePoints => matchesPlayed == 0 ? 0 : totalPoints / matchesPlayed;
   double get winRate => matchesPlayed == 0 ? 0 : wins / matchesPlayed;
@@ -39,27 +41,84 @@ class PlayerRankingStats {
     int? totalPoints,
     int? matchesPlayed,
     int? wins,
+    List<RankingMatchHistoryEntry>? rankingHistory,
   }) {
     return PlayerRankingStats(
       totalPoints: totalPoints ?? this.totalPoints,
       matchesPlayed: matchesPlayed ?? this.matchesPlayed,
       wins: wins ?? this.wins,
+      rankingHistory: rankingHistory ?? this.rankingHistory,
     );
   }
 
-  Map<String, int> toJson() {
-    return <String, int>{
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
       'totalPoints': totalPoints,
       'matchesPlayed': matchesPlayed,
       'wins': wins,
+      'rankingHistory': rankingHistory.map((entry) => entry.toJson()).toList(),
     };
   }
 
-  factory PlayerRankingStats.fromJson(Map<String, int> json) {
+  factory PlayerRankingStats.fromJson(Map<String, dynamic> json) {
+    final parsedHistory = <RankingMatchHistoryEntry>[];
+    if (json['rankingHistory'] is List) {
+      final rawHistory = json['rankingHistory'] as List<dynamic>;
+      for (final entry in rawHistory) {
+        if (entry is num) {
+          parsedHistory.add(
+            RankingMatchHistoryEntry(
+              dateIso: '',
+              playersCount: 0,
+              place: 0,
+              rankingPoints: entry.toInt(),
+            ),
+          );
+          continue;
+        }
+        if (entry is Map<String, dynamic>) {
+          parsedHistory.add(RankingMatchHistoryEntry.fromJson(entry));
+        }
+      }
+    }
+
     return PlayerRankingStats(
       totalPoints: json['totalPoints'] ?? 0,
       matchesPlayed: json['matchesPlayed'] ?? 0,
       wins: json['wins'] ?? 0,
+      rankingHistory: parsedHistory,
+    );
+  }
+}
+
+class RankingMatchHistoryEntry {
+  const RankingMatchHistoryEntry({
+    required this.dateIso,
+    required this.playersCount,
+    required this.place,
+    required this.rankingPoints,
+  });
+
+  final String dateIso;
+  final int playersCount;
+  final int place;
+  final int rankingPoints;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'dateIso': dateIso,
+      'playersCount': playersCount,
+      'place': place,
+      'rankingPoints': rankingPoints,
+    };
+  }
+
+  factory RankingMatchHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return RankingMatchHistoryEntry(
+      dateIso: json['dateIso'] as String? ?? '',
+      playersCount: (json['playersCount'] as num?)?.toInt() ?? 0,
+      place: (json['place'] as num?)?.toInt() ?? 0,
+      rankingPoints: (json['rankingPoints'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -108,16 +167,32 @@ class RankingNotifier extends Notifier<RankingState> {
       if (playerName.isEmpty) continue;
 
       final previous = updated[playerName] ??
-          const PlayerRankingStats(totalPoints: 0, matchesPlayed: 0, wins: 0);
+          const PlayerRankingStats(
+            totalPoints: 0,
+            matchesPlayed: 0,
+            wins: 0,
+            rankingHistory: <RankingMatchHistoryEntry>[],
+          );
       final isWinner = playerScore.score == winnerScore;
       final earnedPoints = (previousScore != null && playerScore.score == previousScore)
           ? previousEarnedPoints!
           : totalPlayers - index;
+      final place = totalPlayers - earnedPoints + 1;
+      final updatedHistory = List<RankingMatchHistoryEntry>.from(previous.rankingHistory)
+        ..add(
+          RankingMatchHistoryEntry(
+            dateIso: DateTime.now().toIso8601String(),
+            playersCount: totalPlayers,
+            place: place,
+            rankingPoints: earnedPoints,
+          ),
+        );
 
       updated[playerName] = previous.copyWith(
         totalPoints: previous.totalPoints + earnedPoints,
         matchesPlayed: previous.matchesPlayed + 1,
         wins: previous.wins + (isWinner ? 1 : 0),
+        rankingHistory: updatedHistory,
       );
 
       previousScore = playerScore.score;
