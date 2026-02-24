@@ -1,4 +1,4 @@
-import 'package:animate_do/animate_do.dart';
+﻿import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,17 +23,40 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Borrar historial'),
-        content: const Text('Se eliminarán todos los puntos del ranking.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Borrar'),
-          ),
-        ],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Se eliminaran todos los puntos del ranking.'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFC7CBD3),
+                        foregroundColor: Colors.black,
+                      ),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 46,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Borrar'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
 
@@ -41,7 +64,6 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       await ref.read(rankingProvider.notifier).clearHistory();
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final rankingState = ref.watch(rankingProvider);
@@ -240,3 +262,4 @@ class _EmptyRankingView extends StatelessWidget {
     );
   }
 }
+
