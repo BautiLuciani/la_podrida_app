@@ -163,6 +163,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             StatefulBuilder(
               builder: (context, setModalState) {
                 final hasMissingSelection = fulfilledValues.any((value) => value == null);
+                final hasAtLeastOneNotFulfilled = fulfilledValues.any((value) => value == false);
                 final hasInvalidInput = List<int>.generate(
                   match.players.length,
                   (index) => index,
@@ -306,7 +307,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                   child: SizedBox(
                                     height: 46,
                                     child: ElevatedButton(
-                                      onPressed: (hasInvalidInput || hasMissingSelection)
+                                      onPressed: (hasInvalidInput ||
+                                              hasMissingSelection ||
+                                              !hasAtLeastOneNotFulfilled)
                                           ? null
                                           : () {
                                               try {
