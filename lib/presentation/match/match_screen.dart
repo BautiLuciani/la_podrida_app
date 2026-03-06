@@ -198,7 +198,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 ).any((playerIndex) {
                   if (fulfilledValues[playerIndex] != false) return false;
                   final value = int.tryParse(trickControllers[playerIndex].text);
-                  return value == null || value < 0 || value > round.trickTarget;
+                  final bid = match.bids[currentIndex][playerIndex] ?? 0;
+                  return value == null ||
+                      value < 0 ||
+                      value > round.trickTarget ||
+                      value == bid;
                 });
                 final isSmallScreen = MediaQuery.sizeOf(context).width < 390;
                 final buttonIconSize = isSmallScreen ? 14.0 : 16.0;
@@ -363,9 +367,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                   final parsed = int.tryParse(
                                                     trickControllers[playerIndex].text,
                                                   );
+                                                  final bid =
+                                                      match.bids[currentIndex][playerIndex] ?? 0;
                                                   if (parsed == null ||
                                                       parsed < 0 ||
-                                                      parsed > round.trickTarget) {
+                                                      parsed > round.trickTarget ||
+                                                      parsed == bid) {
                                                     return;
                                                   }
 
