@@ -678,6 +678,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                               }
                                                             });
                                                           },
+                                                          onEditingComplete: () {},
                                                           onSubmitted: (value) {
                                                             final parsed = int.tryParse(value);
                                                             if (parsed == null) {
@@ -702,16 +703,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                             });
 
                                                             if (!success) return;
-
-                                                            WidgetsBinding.instance
-                                                                .addPostFrameCallback((_) {
-                                                              if (!mounted) return;
-                                                              _focusNextBidField(
-                                                                roundIndex: roundIndex,
-                                                                currentPlayerIndex: playerIndex,
-                                                                notifier: notifier,
-                                                              );
-                                                            });
+                                                            if (!mounted) return;
+                                                            _focusNextBidField(
+                                                              roundIndex: roundIndex,
+                                                              currentPlayerIndex: playerIndex,
+                                                              notifier: notifier,
+                                                            );
                                                           },
                                                         )
                                                       : Text(
