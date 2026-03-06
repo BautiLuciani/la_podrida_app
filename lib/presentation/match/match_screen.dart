@@ -46,6 +46,34 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     return created;
   }
 
+  void _focusNextBidField({
+    required int roundIndex,
+    required int currentPlayerIndex,
+    required MatchNotifier notifier,
+  }) {
+    final match = ref.read(matchProvider);
+    if (match == null) return;
+
+    for (var offset = 1; offset < match.players.length; offset++) {
+      final nextPlayerIndex = (currentPlayerIndex + offset) % match.players.length;
+      final canFocusNext = roundIndex == match.currentRoundIndex &&
+          !match.finished &&
+          match.bids[roundIndex][nextPlayerIndex] == null &&
+          notifier.canPlayerBid(
+            roundIndex: roundIndex,
+            playerIndex: nextPlayerIndex,
+          );
+      if (!canFocusNext) continue;
+
+      final nextKey = _cellKey(roundIndex, nextPlayerIndex);
+      final nextFocusNode = _getBidFocusNode(nextKey);
+      FocusScope.of(context).requestFocus(nextFocusNode);
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+  }
+
   @override
   void dispose() {
     for (final controller in _bidControllers.values) {
@@ -514,6 +542,19 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     final isStarter = playerIndex == round.starterIndex;
                                     final cellKey = _cellKey(roundIndex, playerIndex);
                                     final hasError = _invalidBidCells.contains(cellKey);
+                                    final hasNextEditablePlayer = List<int>.generate(
+                                      match.players.length - 1,
+                                      (index) =>
+                                          (playerIndex + index + 1) % match.players.length,
+                                    ).any((nextPlayerIndex) {
+                                      return isCurrentRound &&
+                                          !isResolved &&
+                                          match.bids[roundIndex][nextPlayerIndex] == null &&
+                                          notifier.canPlayerBid(
+                                            roundIndex: roundIndex,
+                                            playerIndex: nextPlayerIndex,
+                                          );
+                                    });
 
                                     Color fillColor = Colors.white;
                                     if (fulfilled == true) fillColor = Colors.green.shade100;
@@ -562,7 +603,9 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                           controller: controller,
                                                           focusNode: focusNode,
                                                           keyboardType: TextInputType.number,
-                                                          textInputAction: TextInputAction.done,
+                                                          textInputAction: hasNextEditablePlayer
+                                                              ? TextInputAction.next
+                                                              : TextInputAction.done,
                                                           inputFormatters: [
                                                             FilteringTextInputFormatter.digitsOnly,
                                                           ],
@@ -633,6 +676,41 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                                                 _invalidBidCells
                                                                     .add(cellKey);
                                                               }
+                                                            });
+                                                          },
+                                                          onSubmitted: (value) {
+                                                            final parsed = int.tryParse(value);
+                                                            if (parsed == null) {
+                                                              setState(() {
+                                                                _invalidBidCells.add(cellKey);
+                                                              });
+                                                              return;
+                                                            }
+
+                                                            final success = notifier.setBid(
+                                                              roundIndex: roundIndex,
+                                                              playerIndex: playerIndex,
+                                                              bid: parsed,
+                                                            );
+
+                                                            setState(() {
+                                                              if (success) {
+                                                                _invalidBidCells.remove(cellKey);
+                                                              } else {
+                                                                _invalidBidCells.add(cellKey);
+                                                              }
+                                                            });
+
+                                                            if (!success) return;
+
+                                                            WidgetsBinding.instance
+                                                                .addPostFrameCallback((_) {
+                                                              if (!mounted) return;
+                                                              _focusNextBidField(
+                                                                roundIndex: roundIndex,
+                                                                currentPlayerIndex: playerIndex,
+                                                                notifier: notifier,
+                                                              );
                                                             });
                                                           },
                                                         )
