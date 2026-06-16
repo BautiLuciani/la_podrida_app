@@ -33,6 +33,18 @@ class SettingsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: [
             Card(
+              child: ListTile(
+                title: const Text(
+                  'Jugadores',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                onTap: () => context.push('/saved_players'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
               child: SwitchListTile(
                 value: settings.blockFourZeros,
                 title: const Text('Regla 000', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),

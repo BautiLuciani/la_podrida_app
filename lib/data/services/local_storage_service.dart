@@ -13,6 +13,7 @@ class LocalStorageService {
   static const _pointsPerBazaGanadaKey = 'pointsPerBaza';
   static const _pointsPerBazaPerdidaKey = 'pointsPerBazaPerdida';
   static const _roundsOfSevenPerPlayerKey = 'roundsOfSevenPerPlayer';
+  static const _savedPlayersKey = 'savedPlayers';
   static const _lastPlayersKey = 'lastPlayers';
   static const _rankingPointsKey = 'rankingPoints';
 
@@ -64,6 +65,16 @@ class LocalStorageService {
   Future<int?> getRoundsOfSevenPerPlayer() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_roundsOfSevenPerPlayerKey);
+  }
+
+  Future<void> saveSavedPlayers(List<String> players) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_savedPlayersKey, players);
+  }
+
+  Future<List<String>> getSavedPlayers() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_savedPlayersKey) ?? [];
   }
 
   Future<void> saveLastPlayers(List<String> players) async {

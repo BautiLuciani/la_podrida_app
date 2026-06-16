@@ -4,6 +4,7 @@ import 'package:la_podrida_app/presentation/home/home_screen.dart';
 import 'package:la_podrida_app/presentation/match/match_screen.dart';
 import 'package:la_podrida_app/presentation/ranking/ranking_screen.dart';
 import 'package:la_podrida_app/presentation/results/results_screen.dart';
+import 'package:la_podrida_app/presentation/saved_players/saved_players_screen.dart';
 import 'package:la_podrida_app/presentation/settings/settings_screen.dart';
 import 'package:la_podrida_app/presentation/setup/setup_screen.dart';
 
@@ -33,6 +34,10 @@ final appRouterProvider = Provider<GoRouter>(
       GoRoute(
         path: '/ranking',
         builder: (context, state) => const RankingScreen(),
+      ),
+      GoRoute(
+        path: '/saved_players',
+        builder: (context, state) => const SavedPlayersScreen(),
       ),
     ],
   ),

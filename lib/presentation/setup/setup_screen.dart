@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:la_podrida_app/application/providers/match_provider.dart';
 import 'package:la_podrida_app/application/providers/match_setup_provider.dart';
+import 'package:la_podrida_app/application/providers/saved_players_provider.dart';
 import 'package:la_podrida_app/application/providers/settings_provider.dart';
 import 'package:la_podrida_app/domain/models/player.dart';
 
@@ -56,11 +59,106 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
     }
   }
 
+  void _showPlayerPickerDialog({
+    required BuildContext context,
+    required Player player,
+    required List<String> savedPlayers,
+    required MatchSetupNotifier setupNotifier,
+  }) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (dialogContext) {
+        return GestureDetector(
+          onTap: () => Navigator.of(dialogContext).pop(),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                    child: Container(color: Colors.black.withValues(alpha: 0.18)),
+                  ),
+                ),
+              ),
+              Center(
+                child: GestureDetector(
+                  onTap: () {},
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      width: 280,
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5,
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: savedPlayers.map((name) {
+                            return GestureDetector(
+                              onTap: () {
+                                _controllers[player.id]?.text = name;
+                                setupNotifier.updatePlayerName(player.id, name);
+                                Navigator.of(dialogContext).pop();
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 14,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.black54),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final setupState = ref.watch(matchSetupProvider);
     final setupNotifier = ref.read(matchSetupProvider.notifier);
+    final savedPlayers = ref.watch(savedPlayersProvider);
 
     if (!_loadedLastPlayers && settings.lastPlayers.isNotEmpty) {
       _loadedLastPlayers = true;
@@ -214,6 +312,16 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                                 },
                               ),
                             ),
+                            if (savedPlayers.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.keyboard_arrow_down),
+                                onPressed: () => _showPlayerPickerDialog(
+                                  context: context,
+                                  player: player,
+                                  savedPlayers: savedPlayers,
+                                  setupNotifier: setupNotifier,
+                                ),
+                              ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: canRemove
