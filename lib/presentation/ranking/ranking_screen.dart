@@ -1,9 +1,11 @@
-﻿import 'dart:ui';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:la_podrida_app/application/providers/player_avatars_provider.dart';
 import 'package:la_podrida_app/application/providers/ranking_provider.dart';
 
 class RankingScreen extends ConsumerStatefulWidget {
@@ -14,6 +16,8 @@ class RankingScreen extends ConsumerStatefulWidget {
 }
 
 class _RankingScreenState extends ConsumerState<RankingScreen> {
+  int _selectedTab = 0;
+
   @override
   void initState() {
     super.initState();
@@ -121,20 +125,16 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'El ranking se ordena por promedio de puntos.',
+                        'El ranking se ordena por victorias.',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                       SizedBox(height: 10),
                       Text(
-                        'En cada partida, el primer puesto suma N puntos (N = cantidad de jugadores), el segundo N-1, y asi hasta el ultimo que suma 1.',
+                        'Solo el jugador (o los jugadores empatados) con el mayor puntaje al final de la partida suma 1 punto al ranking.',
                       ),
                       SizedBox(height: 10),
                       Text(
-                        'El promedio se calcula como: puntos acumulados / partidas jugadas.',
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        'Los colores oro, plata y bronce coinciden con los 3 mejores promedios del ranking.',
+                        'Los colores oro, plata y bronce coinciden con los 3 jugadores con más victorias.',
                       ),
                     ],
                   ),
@@ -222,9 +222,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                       Text(
                         playerName,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
@@ -249,11 +247,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                             itemCount: recentMatches.length,
                             separatorBuilder: (_, _) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {
-                              final matchEntry = recentMatches[index];
-                              final dateText = _formatDate(matchEntry.dateIso);
-                              final placeText = _placeLabel(matchEntry.place);
-                              final chipColor = _placeChipColor(matchEntry.place);
-
+                              final entry = recentMatches[index];
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
@@ -264,85 +258,42 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: const Color(0xFFD1D5DD)),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            dateText,
-                                            style: const TextStyle(
-                                              color: Color(0xFF5B6680),
-                                              fontSize: 15,
-                                            ),
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        _formatDate(entry.dateIso),
+                                        style: const TextStyle(
+                                          color: Color(0xFF5B6680),
+                                          fontSize: 15,
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: chipColor,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            placeText,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 10),
-                                    const Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            'Puntaje',
-                                            style: TextStyle(
-                                              color: Color(0xFF5B6680),
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          'Jugadores',
-                                          style: TextStyle(
-                                            color: Color(0xFF5B6680),
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
+                                    Text(
+                                      '${entry.playersCount} jug.',
+                                      style: const TextStyle(
+                                        color: Color(0xFF5B6680),
+                                        fontSize: 13,
+                                      ),
                                     ),
-                                    const SizedBox(height: 3),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            '${matchEntry.rankingPoints}',
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 36,
-                                              height: 1,
-                                            ),
-                                          ),
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _placeChipColor(entry.place),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        _placeLabel(entry.place),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
                                         ),
-                                        Text(
-                                          '${matchEntry.playersCount}',
-                                          style: const TextStyle(
-                                            color: Color(0xFF25314D),
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 35,
-                                            height: 1,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -361,20 +312,121 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     );
   }
 
+  Widget _buildTabButton({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? const [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 1))]
+              : [],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: selected ? Colors.black : const Color(0xFF7C86A0)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? Colors.black : const Color(0xFF7C86A0),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLastMatchTab(String? lastMatchWinner, Map<String, String> avatars) {
+    if (lastMatchWinner == null) {
+      return const _EmptyRankingView();
+    }
+
+    final avatarPath = avatars[lastMatchWinner];
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Última victoria',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF7C86A0), fontSize: 16),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              lastMatchWinner,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 28),
+            Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE3AA00), width: 3),
+              ),
+              child: ClipOval(
+                child: avatarPath != null
+                    ? Image.file(
+                        File(avatarPath),
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _defaultAvatarIcon(),
+                      )
+                    : _defaultAvatarIcon(),
+              ),
+            ),
+            if (avatarPath == null) ...[
+              const SizedBox(height: 16),
+              Text(
+                'No hay un avatar para $lastMatchWinner',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF7C86A0), fontSize: 15),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultAvatarIcon() {
+    return Container(
+      color: const Color(0xFFF0F0F2),
+      child: const Icon(Icons.person, size: 80, color: Color(0xFFBFC5D2)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rankingState = ref.watch(rankingProvider);
+    final avatars = ref.watch(playerAvatarsProvider);
+
     final entries = rankingState.statsByPlayer.entries
-        .where((entry) => entry.value.matchesPlayed > 0)
+        .where((e) => e.value.matchesPlayed > 0)
         .toList()
       ..sort((a, b) {
-        final averageCompare = b.value.averagePoints.compareTo(a.value.averagePoints);
-        if (averageCompare != 0) return averageCompare;
-
-        final matchesCompare = b.value.matchesPlayed.compareTo(a.value.matchesPlayed);
-        if (matchesCompare != 0) return matchesCompare;
-
-        return b.value.winRate.compareTo(a.value.winRate);
+        final winsCompare = b.value.wins.compareTo(a.value.wins);
+        if (winsCompare != 0) return winsCompare;
+        final winRateCompare = b.value.winRate.compareTo(a.value.winRate);
+        if (winRateCompare != 0) return winRateCompare;
+        return b.value.matchesPlayed.compareTo(a.value.matchesPlayed);
       });
 
     final podiumByPlayer = <String, int>{};
@@ -382,40 +434,30 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
       podiumByPlayer[entries[i].key] = i;
     }
 
-    Color backgroundFor(String playerName) {
-      final podiumRank = podiumByPlayer[playerName];
-      if (podiumRank == 0) return const Color(0xFFFFF4CC);
-      if (podiumRank == 1) return const Color(0xFFF0F2F5);
-      if (podiumRank == 2) return const Color(0xFFFFE8D6);
+    Color backgroundFor(String name) {
+      final rank = podiumByPlayer[name];
+      if (rank == 0) return const Color(0xFFFFF4CC);
+      if (rank == 1) return const Color(0xFFF0F2F5);
+      if (rank == 2) return const Color(0xFFFFE8D6);
       return Colors.white;
     }
 
-    Color borderFor(String playerName) {
-      final podiumRank = podiumByPlayer[playerName];
-      if (podiumRank == 0) return const Color(0xFFE3AA00);
-      if (podiumRank == 1) return const Color(0xFFA7B0BB);
-      if (podiumRank == 2) return const Color(0xFFD4702A);
+    Color borderFor(String name) {
+      final rank = podiumByPlayer[name];
+      if (rank == 0) return const Color(0xFFE3AA00);
+      if (rank == 1) return const Color(0xFFA7B0BB);
+      if (rank == 2) return const Color(0xFFD4702A);
       return const Color(0xFFD3D7DE);
     }
 
-    Widget leadingFor(int index, String playerName) {
-      final podiumRank = podiumByPlayer[playerName];
-      if (podiumRank == 0) {
-        return const Icon(Icons.workspace_premium_rounded, color: Color(0xFFE3AA00));
-      }
-      if (podiumRank == 1) {
-        return const Icon(Icons.military_tech_outlined, color: Color(0xFFA7B0BB));
-      }
-      if (podiumRank == 2) {
-        return const Icon(Icons.military_tech_outlined, color: Color(0xFFD4702A));
-      }
+    Widget leadingFor(int index, String name) {
+      final rank = podiumByPlayer[name];
+      if (rank == 0) return const Icon(Icons.workspace_premium_rounded, color: Color(0xFFE3AA00));
+      if (rank == 1) return const Icon(Icons.military_tech_outlined, color: Color(0xFFA7B0BB));
+      if (rank == 2) return const Icon(Icons.military_tech_outlined, color: Color(0xFFD4702A));
       return Text(
         '${index + 1}',
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 30,
-          color: Color(0xFF3A506B),
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 30, color: Color(0xFF3A506B)),
       );
     }
 
@@ -455,102 +497,126 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Ordenado por promedio de puntos',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, color: Color(0xFF5B6680)),
-                ),
                 const SizedBox(height: 18),
+                // Tab toggle
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F0F2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildTabButton(
+                          label: 'Última Partida',
+                          icon: Icons.emoji_events_rounded,
+                          selected: _selectedTab == 0,
+                          onTap: () => setState(() => _selectedTab = 0),
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildTabButton(
+                          label: 'Ranking',
+                          icon: Icons.leaderboard_rounded,
+                          selected: _selectedTab == 1,
+                          onTap: () => setState(() => _selectedTab = 1),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Expanded(
-                  child: entries.isEmpty
-                      ? const _EmptyRankingView()
-                      : ListView.separated(
-                          itemCount: entries.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final entry = entries[index];
-                            final stats = entry.value;
-                            final winRatePercent = (stats.winRate * 100).toStringAsFixed(0);
+                  child: _selectedTab == 0
+                      ? _buildLastMatchTab(rankingState.lastMatchWinner, avatars)
+                      : entries.isEmpty
+                          ? const _EmptyRankingView()
+                          : ListView.separated(
+                              itemCount: entries.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final entry = entries[index];
+                                final stats = entry.value;
 
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => _showPlayerHistoryDialog(
-                                entry.key,
-                                stats,
-                                podiumByPlayer[entry.key],
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: backgroundFor(entry.key),
+                                return InkWell(
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: borderFor(entry.key)),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 12,
+                                  onTap: () => _showPlayerHistoryDialog(
+                                    entry.key,
+                                    stats,
+                                    podiumByPlayer[entry.key],
                                   ),
-                                  child: Row(
-                                    children: [
-                                      leadingFor(index, entry.key),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              entry.key,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 25,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              '${stats.wins}/${stats.matchesPlayed} victorias ($winRatePercent%)',
-                                              style: const TextStyle(
-                                                color: Color(0xFF5B6680),
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: backgroundFor(entry.key),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: borderFor(entry.key)),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 12,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                      child: Row(
                                         children: [
-                                          Text(
-                                            stats.averagePoints.toStringAsFixed(2),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 32,
-                                              height: 1,
+                                          leadingFor(index, entry.key),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  entry.key,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    fontSize: 25,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 1),
+                                                Text(
+                                                  '${stats.matchesPlayed} partidas jugadas',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF5B6680),
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          const Text(
-                                            'Promedio',
-                                            style: TextStyle(
-                                              color: Color(0xFF5B6680),
-                                              fontSize: 13,
-                                            ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                '${stats.wins}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 32,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              const Text(
+                                                'Victorias',
+                                                style: TextStyle(
+                                                  color: Color(0xFF5B6680),
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+                                );
+                              },
+                            ),
                 ),
-                if (entries.isNotEmpty) ...[
+                if (_selectedTab == 1 && entries.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   SizedBox(
                     height: 48,
@@ -578,12 +644,12 @@ class _EmptyRankingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 100),
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 100),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(Icons.emoji_events_outlined, size: 90, color: Color(0xFFBFC5D2)),
             SizedBox(height: 12),
             Text(
@@ -607,4 +673,3 @@ class _EmptyRankingView extends StatelessWidget {
     );
   }
 }
-

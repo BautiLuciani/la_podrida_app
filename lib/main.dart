@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:la_podrida_app/application/providers/player_avatars_provider.dart';
 import 'package:la_podrida_app/application/providers/saved_players_provider.dart';
 import 'package:la_podrida_app/application/providers/settings_provider.dart';
 import 'package:la_podrida_app/core/router/app_router.dart';
@@ -23,6 +24,7 @@ class _LaPodridaAppState extends ConsumerState<LaPodridaApp> {
     Future<void>.microtask(() async {
       await ref.read(settingsProvider.notifier).loadFromStorage();
       await ref.read(savedPlayersProvider.notifier).loadFromStorage();
+      await ref.read(playerAvatarsProvider.notifier).loadFromStorage();
     });
   }
 

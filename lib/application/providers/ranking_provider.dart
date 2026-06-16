@@ -8,15 +8,19 @@ final rankingProvider =
 class RankingState {
   const RankingState({
     required this.statsByPlayer,
+    this.lastMatchWinner,
   });
 
   final Map<String, PlayerRankingStats> statsByPlayer;
+  final String? lastMatchWinner;
 
   RankingState copyWith({
     Map<String, PlayerRankingStats>? statsByPlayer,
+    String? lastMatchWinner,
   }) {
     return RankingState(
       statsByPlayer: statsByPlayer ?? this.statsByPlayer,
+      lastMatchWinner: lastMatchWinner ?? this.lastMatchWinner,
     );
   }
 }
@@ -130,11 +134,16 @@ class RankingNotifier extends Notifier<RankingState> {
   }
 
   Future<void> loadFromStorage() async {
-    final stored = await ref.read(localStorageServiceProvider).getRankingStats();
+    final storage = ref.read(localStorageServiceProvider);
+    final stored = await storage.getRankingStats();
     final parsed = stored.map(
       (key, value) => MapEntry(key, PlayerRankingStats.fromJson(value)),
     );
-    state = state.copyWith(statsByPlayer: parsed);
+    final lastMatchWinner = await storage.getLastMatchWinner();
+    state = RankingState(
+      statsByPlayer: parsed,
+      lastMatchWinner: lastMatchWinner,
+    );
   }
 
   Future<void> addMatchResult(Match match) async {
@@ -157,14 +166,19 @@ class RankingNotifier extends Notifier<RankingState> {
 
     final totalPlayers = playerScores.length;
     final winnerScore = playerScores.isNotEmpty ? playerScores.first.score : 0;
+    final winnerName = playerScores.isNotEmpty ? playerScores.first.name.trim() : null;
 
     int? previousScore;
-    int? previousEarnedPoints;
+    int currentPlace = 0;
 
     for (var index = 0; index < playerScores.length; index++) {
       final playerScore = playerScores[index];
       final playerName = playerScore.name;
       if (playerName.isEmpty) continue;
+
+      if (previousScore == null || playerScore.score != previousScore) {
+        currentPlace = index + 1;
+      }
 
       final previous = updated[playerName] ??
           const PlayerRankingStats(
@@ -174,16 +188,13 @@ class RankingNotifier extends Notifier<RankingState> {
             rankingHistory: <RankingMatchHistoryEntry>[],
           );
       final isWinner = playerScore.score == winnerScore;
-      final earnedPoints = (previousScore != null && playerScore.score == previousScore)
-          ? previousEarnedPoints!
-          : totalPlayers - index;
-      final place = totalPlayers - earnedPoints + 1;
+      final earnedPoints = isWinner ? 1 : 0;
       final updatedHistory = List<RankingMatchHistoryEntry>.from(previous.rankingHistory)
         ..add(
           RankingMatchHistoryEntry(
             dateIso: DateTime.now().toIso8601String(),
             playersCount: totalPlayers,
-            place: place,
+            place: currentPlace,
             rankingPoints: earnedPoints,
           ),
         );
@@ -196,16 +207,23 @@ class RankingNotifier extends Notifier<RankingState> {
       );
 
       previousScore = playerScore.score;
-      previousEarnedPoints = earnedPoints;
     }
 
     final serializable = updated.map((key, value) => MapEntry(key, value.toJson()));
     await storage.saveRankingStats(serializable);
-    state = state.copyWith(statsByPlayer: updated);
+
+    if (winnerName != null && winnerName.isNotEmpty) {
+      await storage.saveLastMatchWinner(winnerName);
+    }
+
+    state = RankingState(
+      statsByPlayer: updated,
+      lastMatchWinner: winnerName ?? state.lastMatchWinner,
+    );
   }
 
   Future<void> clearHistory() async {
     await ref.read(localStorageServiceProvider).clearRankingPoints();
-    state = state.copyWith(statsByPlayer: <String, PlayerRankingStats>{});
+    state = const RankingState(statsByPlayer: <String, PlayerRankingStats>{});
   }
 }

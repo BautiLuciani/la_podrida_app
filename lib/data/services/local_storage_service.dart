@@ -14,6 +14,8 @@ class LocalStorageService {
   static const _pointsPerBazaPerdidaKey = 'pointsPerBazaPerdida';
   static const _roundsOfSevenPerPlayerKey = 'roundsOfSevenPerPlayer';
   static const _savedPlayersKey = 'savedPlayers';
+  static const _playerAvatarsKey = 'playerAvatars';
+  static const _lastMatchWinnerKey = 'lastMatchWinner';
   static const _lastPlayersKey = 'lastPlayers';
   static const _rankingPointsKey = 'rankingPoints';
 
@@ -65,6 +67,30 @@ class LocalStorageService {
   Future<int?> getRoundsOfSevenPerPlayer() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_roundsOfSevenPerPlayerKey);
+  }
+
+  Future<void> savePlayerAvatars(Map<String, String> avatars) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_playerAvatarsKey, jsonEncode(avatars));
+  }
+
+  Future<Map<String, String>> getPlayerAvatars() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_playerAvatarsKey);
+    if (raw == null || raw.isEmpty) return {};
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return {};
+    return decoded.map((k, v) => MapEntry(k, v as String));
+  }
+
+  Future<void> saveLastMatchWinner(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastMatchWinnerKey, name);
+  }
+
+  Future<String?> getLastMatchWinner() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastMatchWinnerKey);
   }
 
   Future<void> saveSavedPlayers(List<String> players) async {
@@ -184,5 +210,6 @@ class LocalStorageService {
   Future<void> clearRankingPoints() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_rankingPointsKey);
+    await prefs.remove(_lastMatchWinnerKey);
   }
 }

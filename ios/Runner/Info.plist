@@ -47,5 +47,7 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>La Podrida necesita acceso a tu galería para cargar el avatar del jugador.</string>
 	</dict>
 </plist>
