@@ -192,11 +192,12 @@ class MatchNotifier extends Notifier<Match?> {
     required int scoredTricks,
     required bool fulfilled,
   }) {
-    final pointsPerBaza = ref.read(settingsProvider).pointsPerBaza;
+    final settings = ref.read(settingsProvider);
     return ScoreCalculator.calculate(
       bid: scoredTricks,
       fulfilled: fulfilled,
-      pointsPerBaza: pointsPerBaza,
+      pointsPerBazaGanada: settings.pointsPerBazaGanada,
+      pointsPerBazaPerdida: settings.pointsPerBazaPerdida,
     );
   }
 

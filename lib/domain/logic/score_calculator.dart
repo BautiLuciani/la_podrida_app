@@ -4,11 +4,12 @@ class ScoreCalculator {
   static int calculate({
     required int bid,
     required bool fulfilled,
-    required int pointsPerBaza,
+    required int pointsPerBazaGanada,
+    required int pointsPerBazaPerdida,
   }) {
     if (fulfilled) {
-      return 10 + (bid * pointsPerBaza);
+      return 10 + (bid * pointsPerBazaGanada);
     }
-    return bid * pointsPerBaza;
+    return bid * pointsPerBazaPerdida;
   }
 }

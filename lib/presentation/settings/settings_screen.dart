@@ -48,19 +48,46 @@ class SettingsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Puntos por baza',
+                      'Puntos por baza ganada',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    Text('${settings.pointsPerBaza} punto(s)'),
+                    Text('${settings.pointsPerBazaGanada} punto(s)'),
                     Slider(
                       min: 1,
                       max: 5,
                       divisions: 4,
-                      value: settings.pointsPerBaza.toDouble(),
-                      label: settings.pointsPerBaza.toString(),
+                      value: settings.pointsPerBazaGanada.toDouble(),
+                      label: settings.pointsPerBazaGanada.toString(),
                       onChanged: (value) {
-                        settingsNotifier.setPointsPerBaza(value.toInt());
+                        settingsNotifier.setPointsPerBazaGanada(value.toInt());
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Puntos por baza perdida',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${settings.pointsPerBazaPerdida} punto(s)'),
+                    Slider(
+                      min: 1,
+                      max: 5,
+                      divisions: 4,
+                      value: settings.pointsPerBazaPerdida.toDouble(),
+                      label: settings.pointsPerBazaPerdida.toString(),
+                      onChanged: (value) {
+                        settingsNotifier.setPointsPerBazaPerdida(value.toInt());
                       },
                     ),
                   ],

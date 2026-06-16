@@ -8,25 +8,29 @@ class SettingsState {
   const SettingsState({
     required this.blockFourZeros,
     required this.extraRound,
-    required this.pointsPerBaza,
+    required this.pointsPerBazaGanada,
+    required this.pointsPerBazaPerdida,
     required this.lastPlayers,
   });
 
   final bool blockFourZeros;
   final bool extraRound;
-  final int pointsPerBaza;
+  final int pointsPerBazaGanada;
+  final int pointsPerBazaPerdida;
   final List<String> lastPlayers;
 
   SettingsState copyWith({
     bool? blockFourZeros,
     bool? extraRound,
-    int? pointsPerBaza,
+    int? pointsPerBazaGanada,
+    int? pointsPerBazaPerdida,
     List<String>? lastPlayers,
   }) {
     return SettingsState(
       blockFourZeros: blockFourZeros ?? this.blockFourZeros,
       extraRound: extraRound ?? this.extraRound,
-      pointsPerBaza: pointsPerBaza ?? this.pointsPerBaza,
+      pointsPerBazaGanada: pointsPerBazaGanada ?? this.pointsPerBazaGanada,
+      pointsPerBazaPerdida: pointsPerBazaPerdida ?? this.pointsPerBazaPerdida,
       lastPlayers: lastPlayers ?? this.lastPlayers,
     );
   }
@@ -38,7 +42,8 @@ class SettingsNotifier extends Notifier<SettingsState> {
     return const SettingsState(
       blockFourZeros: true,
       extraRound: false,
-      pointsPerBaza: 1,
+      pointsPerBazaGanada: 1,
+      pointsPerBazaPerdida: 1,
       lastPlayers: <String>[],
     );
   }
@@ -47,13 +52,15 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final storage = ref.read(localStorageServiceProvider);
     final blockFourZeros = await storage.getBlockFourZeros();
     final extraRound = await storage.getExtraRound();
-    final pointsPerBaza = await storage.getPointsPerBaza();
+    final pointsPerBazaGanada = await storage.getPointsPerBazaGanada();
+    final pointsPerBazaPerdida = await storage.getPointsPerBazaPerdida();
     final lastPlayers = await storage.getLastPlayers();
 
     state = state.copyWith(
       blockFourZeros: blockFourZeros ?? state.blockFourZeros,
       extraRound: extraRound ?? state.extraRound,
-      pointsPerBaza: pointsPerBaza ?? state.pointsPerBaza,
+      pointsPerBazaGanada: pointsPerBazaGanada ?? state.pointsPerBazaGanada,
+      pointsPerBazaPerdida: pointsPerBazaPerdida ?? state.pointsPerBazaPerdida,
       lastPlayers: lastPlayers,
     );
   }
@@ -64,10 +71,16 @@ class SettingsNotifier extends Notifier<SettingsState> {
     await ref.read(localStorageServiceProvider).saveBlockFourZeros(updated);
   }
 
-  Future<void> setPointsPerBaza(int value) async {
+  Future<void> setPointsPerBazaGanada(int value) async {
     if (value < 1) return;
-    state = state.copyWith(pointsPerBaza: value);
-    await ref.read(localStorageServiceProvider).savePointsPerBaza(value);
+    state = state.copyWith(pointsPerBazaGanada: value);
+    await ref.read(localStorageServiceProvider).savePointsPerBazaGanada(value);
+  }
+
+  Future<void> setPointsPerBazaPerdida(int value) async {
+    if (value < 1) return;
+    state = state.copyWith(pointsPerBazaPerdida: value);
+    await ref.read(localStorageServiceProvider).savePointsPerBazaPerdida(value);
   }
 
   Future<void> toggleExtraRound() async {
