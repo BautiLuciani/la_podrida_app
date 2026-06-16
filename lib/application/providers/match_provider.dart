@@ -19,6 +19,7 @@ class MatchNotifier extends Notifier<Match?> {
     final roundsData = RoundGenerator.generate(
       players.length,
       extraRound: settings.extraRound,
+      roundsOfSevenPerPlayer: settings.roundsOfSevenPerPlayer,
     );
     final rounds = List<Round>.generate(
       roundsData.length,

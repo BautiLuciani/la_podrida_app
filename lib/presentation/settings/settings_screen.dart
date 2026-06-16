@@ -96,6 +96,33 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Ronda sin triunfo por jugador',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${settings.roundsOfSevenPerPlayer} ronda(s)'),
+                    Slider(
+                      min: 1,
+                      max: 3,
+                      divisions: 2,
+                      value: settings.roundsOfSevenPerPlayer.toDouble(),
+                      label: settings.roundsOfSevenPerPlayer.toString(),
+                      onChanged: (value) {
+                        settingsNotifier.setRoundsOfSevenPerPlayer(value.toInt());
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
               child: SwitchListTile(
                 value: settings.extraRound,
                 title: const Text('Ronda Extra', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),

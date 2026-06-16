@@ -10,6 +10,7 @@ class SettingsState {
     required this.extraRound,
     required this.pointsPerBazaGanada,
     required this.pointsPerBazaPerdida,
+    required this.roundsOfSevenPerPlayer,
     required this.lastPlayers,
   });
 
@@ -17,6 +18,7 @@ class SettingsState {
   final bool extraRound;
   final int pointsPerBazaGanada;
   final int pointsPerBazaPerdida;
+  final int roundsOfSevenPerPlayer;
   final List<String> lastPlayers;
 
   SettingsState copyWith({
@@ -24,6 +26,7 @@ class SettingsState {
     bool? extraRound,
     int? pointsPerBazaGanada,
     int? pointsPerBazaPerdida,
+    int? roundsOfSevenPerPlayer,
     List<String>? lastPlayers,
   }) {
     return SettingsState(
@@ -31,6 +34,7 @@ class SettingsState {
       extraRound: extraRound ?? this.extraRound,
       pointsPerBazaGanada: pointsPerBazaGanada ?? this.pointsPerBazaGanada,
       pointsPerBazaPerdida: pointsPerBazaPerdida ?? this.pointsPerBazaPerdida,
+      roundsOfSevenPerPlayer: roundsOfSevenPerPlayer ?? this.roundsOfSevenPerPlayer,
       lastPlayers: lastPlayers ?? this.lastPlayers,
     );
   }
@@ -44,6 +48,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       extraRound: false,
       pointsPerBazaGanada: 1,
       pointsPerBazaPerdida: 1,
+      roundsOfSevenPerPlayer: 1,
       lastPlayers: <String>[],
     );
   }
@@ -54,6 +59,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final extraRound = await storage.getExtraRound();
     final pointsPerBazaGanada = await storage.getPointsPerBazaGanada();
     final pointsPerBazaPerdida = await storage.getPointsPerBazaPerdida();
+    final roundsOfSevenPerPlayer = await storage.getRoundsOfSevenPerPlayer();
     final lastPlayers = await storage.getLastPlayers();
 
     state = state.copyWith(
@@ -61,6 +67,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       extraRound: extraRound ?? state.extraRound,
       pointsPerBazaGanada: pointsPerBazaGanada ?? state.pointsPerBazaGanada,
       pointsPerBazaPerdida: pointsPerBazaPerdida ?? state.pointsPerBazaPerdida,
+      roundsOfSevenPerPlayer: roundsOfSevenPerPlayer ?? state.roundsOfSevenPerPlayer,
       lastPlayers: lastPlayers,
     );
   }
@@ -81,6 +88,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
     if (value < 1) return;
     state = state.copyWith(pointsPerBazaPerdida: value);
     await ref.read(localStorageServiceProvider).savePointsPerBazaPerdida(value);
+  }
+
+  Future<void> setRoundsOfSevenPerPlayer(int value) async {
+    if (value < 1) return;
+    state = state.copyWith(roundsOfSevenPerPlayer: value);
+    await ref.read(localStorageServiceProvider).saveRoundsOfSevenPerPlayer(value);
   }
 
   Future<void> toggleExtraRound() async {
