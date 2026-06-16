@@ -191,7 +191,6 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             StatefulBuilder(
               builder: (context, setModalState) {
                 final hasMissingSelection = fulfilledValues.any((value) => value == null);
-                final hasAtLeastOneNotFulfilled = fulfilledValues.any((value) => value == false);
                 final hasInvalidInput = List<int>.generate(
                   match.players.length,
                   (index) => index,
@@ -204,6 +203,13 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       value > round.trickTarget ||
                       value == bid;
                 });
+                final trickSum = List<int>.generate(match.players.length, (playerIndex) {
+                  final decision = fulfilledValues[playerIndex];
+                  if (decision == true) return match.bids[currentIndex][playerIndex] ?? 0;
+                  if (decision == false) return int.tryParse(trickControllers[playerIndex].text) ?? -1;
+                  return 0;
+                }).fold(0, (sum, value) => sum + value);
+                final trickSumMatchesTarget = trickSum == round.trickTarget;
                 final isSmallScreen = MediaQuery.sizeOf(context).width < 390;
                 final buttonIconSize = isSmallScreen ? 14.0 : 16.0;
 
@@ -341,7 +347,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     child: ElevatedButton(
                                       onPressed: (hasInvalidInput ||
                                               hasMissingSelection ||
-                                              !hasAtLeastOneNotFulfilled)
+                                              !trickSumMatchesTarget)
                                           ? null
                                           : () {
                                               try {
