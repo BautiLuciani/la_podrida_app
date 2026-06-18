@@ -226,4 +226,5 @@ class RankingNotifier extends Notifier<RankingState> {
     await ref.read(localStorageServiceProvider).clearRankingPoints();
     state = const RankingState(statsByPlayer: <String, PlayerRankingStats>{});
   }
+
 }

@@ -97,9 +97,7 @@ class _SavedPlayersScreenState extends ConsumerState<SavedPlayersScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 400,
-      maxHeight: 400,
-      imageQuality: 80,
+      imageQuality: 90,
     );
     if (picked == null || !mounted) return;
     await ref.read(playerAvatarsProvider.notifier).setAvatar(trimmed, picked.path);
@@ -121,7 +119,7 @@ class _SavedPlayersScreenState extends ConsumerState<SavedPlayersScreen> {
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) =>
+                  errorBuilder: (_, _, _) =>
                       Icon(Icons.person, size: 24, color: Colors.grey.shade600),
                 )
               : Icon(Icons.person, size: 24, color: Colors.grey.shade600),

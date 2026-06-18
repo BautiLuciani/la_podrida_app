@@ -349,67 +349,155 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
     );
   }
 
-  Widget _buildLastMatchTab(String? lastMatchWinner, Map<String, String> avatars) {
-    if (lastMatchWinner == null) {
-      return const _EmptyRankingView();
+  int _calculateStreak(List<RankingMatchHistoryEntry> history) {
+    var streak = 0;
+    for (final entry in history.reversed) {
+      if (entry.place == 1) {
+        streak++;
+      } else {
+        break;
+      }
     }
+    return streak;
+  }
 
-    final avatarPath = avatars[lastMatchWinner];
+  String _daysWithBelt(List<RankingMatchHistoryEntry> history) {
+    DateTime? beltSince;
+    for (final entry in history.reversed) {
+      if (entry.place == 1) {
+        final d = DateTime.tryParse(entry.dateIso);
+        if (d != null) beltSince = d;
+      } else {
+        break;
+      }
+    }
+    if (beltSince == null) return '0';
+    final days = DateTime.now().difference(beltSince).inDays;
+    return '$days';
+  }
 
-    return Center(
-      child: SingleChildScrollView(
+  Widget _statChip({required String value, required String label, required IconData icon}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFD1D5DD)),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Última victoria',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF7C86A0), fontSize: 16),
-            ),
-            const SizedBox(height: 6),
+            Icon(icon, size: 18, color: Colors.black),
+            const SizedBox(height: 4),
             Text(
-              lastMatchWinner,
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, height: 1.1),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF5B6680), height: 1.2),
             ),
-            const SizedBox(height: 28),
-            Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE3AA00), width: 3),
-              ),
-              child: ClipOval(
-                child: avatarPath != null
-                    ? Image.file(
-                        File(avatarPath),
-                        width: 180,
-                        height: 180,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _defaultAvatarIcon(),
-                      )
-                    : _defaultAvatarIcon(),
-              ),
-            ),
-            if (avatarPath == null) ...[
-              const SizedBox(height: 16),
-              Text(
-                'No hay un avatar para $lastMatchWinner',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF7C86A0), fontSize: 15),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _defaultAvatarIcon() {
-    return Container(
-      color: const Color(0xFFF0F0F2),
-      child: const Icon(Icons.person, size: 80, color: Color(0xFFBFC5D2)),
+  Widget _buildLastMatchTab(
+    String? lastMatchWinner,
+    Map<String, String> avatars,
+    Map<String, PlayerRankingStats> statsByPlayer,
+  ) {
+    if (lastMatchWinner == null) {
+      return const _EmptyRankingView();
+    }
+
+    final avatarPath = avatars[lastMatchWinner];
+    final stats = statsByPlayer[lastMatchWinner];
+    final history = stats?.rankingHistory ?? [];
+    final streak = _calculateStreak(history);
+    final daysText = _daysWithBelt(history);
+    final winPct = stats != null && stats.matchesPlayed > 0
+        ? (stats.winRate * 100).round()
+        : 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Última victoria',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF7C86A0), fontSize: 15),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          lastMatchWinner,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            _statChip(
+              value: streak == 1 ? '1 vez' : '$streak veces',
+              label: 'Defendiendo\nel cinturón',
+              icon: Icons.shield_outlined,
+            ),
+            const SizedBox(width: 8),
+            _statChip(
+              value: '$daysText días',
+              label: 'Con el\ncinturón',
+              icon: Icons.timer_outlined,
+            ),
+            const SizedBox(width: 8),
+            _statChip(
+              value: '$winPct%',
+              label: 'Porcentaje\nde victorias',
+              icon: Icons.bar_chart_rounded,
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Expanded(
+          child: avatarPath != null
+              ? Image.file(
+                  File(avatarPath),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  errorBuilder: (_, _, _) => _noAvatarPlaceholder(lastMatchWinner),
+                )
+              : _noAvatarPlaceholder(lastMatchWinner),
+        ),
+      ],
+    );
+  }
+
+  Widget _noAvatarPlaceholder(String name) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 160,
+            height: 160,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE3AA00), width: 3),
+              color: const Color(0xFFF0F0F2),
+            ),
+            child: const Icon(Icons.person, size: 80, color: Color(0xFFBFC5D2)),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'No hay un avatar para $name',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF7C86A0), fontSize: 15),
+          ),
+        ],
+      ),
     );
   }
 
@@ -529,7 +617,7 @@ class _RankingScreenState extends ConsumerState<RankingScreen> {
                 const SizedBox(height: 16),
                 Expanded(
                   child: _selectedTab == 0
-                      ? _buildLastMatchTab(rankingState.lastMatchWinner, avatars)
+                      ? _buildLastMatchTab(rankingState.lastMatchWinner, avatars, rankingState.statsByPlayer)
                       : entries.isEmpty
                           ? const _EmptyRankingView()
                           : ListView.separated(
